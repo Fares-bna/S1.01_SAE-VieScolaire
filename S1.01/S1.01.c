@@ -44,7 +44,7 @@ typedef struct {
 int verification(Etudiant etudiants[MAX_ETUDIANTS], int nbEtudiants, char nom[], int groupe) {
     for (int i = 0; i < nbEtudiants; ++i) {
         if (strcmp(etudiants[i].nom, nom) == 0 && etudiants[i].groupe == groupe) {
-            printf("Nom incorrect, il existe deja un etudiant portant ce nom dans ce groupe.\n");
+            printf("Nom incorrect\n");
             return 0; // L'étudiant existe déjà
         }
     }
@@ -87,7 +87,7 @@ int verification_abs(Absence absences[], int nbAbsences, int id_etu, int jour, c
 
     for (int i = 0; i < nbAbsences; ++i) {
         if (absences[i].id_etu == id_etu && absences[i].jour == jour && strcmp(absences[i].demi_journee, demi_journee) == 0) {
-            printf("Absence deja enregistree\n");
+            printf("Absence deja connue\n");
             return 0; // Absence déjà enregistrée
         }
     }
@@ -179,7 +179,7 @@ void afficherEtudiants(int jour, Etudiant etudiants[], Absence absences[], int n
         }
 
         // Afficher les informations de l'étudiant
-        printf("(%d) %-20s %-8d %-10d\n", etudiants[i].id_etu, etudiants[i].nom, etudiants[i].groupe, totalAbsencesAceJour);
+        printf("(%d) %s %d %d\n", etudiants[i].id_etu, etudiants[i].nom, etudiants[i].groupe, totalAbsencesAceJour);
     }
 }
 
