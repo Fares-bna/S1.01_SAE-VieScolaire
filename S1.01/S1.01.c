@@ -26,6 +26,7 @@ typedef struct {
     int id_etu;  // Identifiant de l'étudiant
     int jour;    // Jour d'absence (1-40)
     char demi_journee[DEMI_JOURNEE]; // "am" ou "pm"
+    int id_abs;
 } Absence;
 
 
@@ -37,14 +38,13 @@ typedef struct {
 }Justificatif;
 
 
-
 //-----------------------------------------------------------------------------------------------------C1------------------------------------------------------------------------------------------------------------//
 
 // Vérification de l'existence d'un étudiant
 int verification(Etudiant etudiants[MAX_ETUDIANTS], int nbEtudiants, char nom[], int groupe) {
     for (int i = 0; i < nbEtudiants; ++i) {
         if (strcmp(etudiants[i].nom, nom) == 0 && etudiants[i].groupe == groupe) {
-            printf("Nom incorrect, il existe deja un etudiant portant ce nom dans ce groupe.\n");
+            printf("Nom incorrect\n");
             return 0; // L'étudiant existe déjà
         }
     }
@@ -87,7 +87,7 @@ int verification_abs(Absence absences[], int nbAbsences, int id_etu, int jour, c
 
     for (int i = 0; i < nbAbsences; ++i) {
         if (absences[i].id_etu == id_etu && absences[i].jour == jour && strcmp(absences[i].demi_journee, demi_journee) == 0) {
-            printf("Absence deja enregistree\n");
+            printf("Absence deja connue\n");
             return 0; // Absence déjà enregistrée
         }
     }
@@ -104,6 +104,7 @@ void absence_enregistrement(Absence absences[], int* nbAbsences, int nbEtudiants
     scanf("%d %d %s", &id_etu, &jour, demi_journee);
 
     if (verification_abs(absences, *nbAbsences, id_etu, jour, demi_journee, nbEtudiants)) {
+        absences[*nbAbsences].id_abs = *nbAbsences + 1;
         absences[*nbAbsences].id_etu = id_etu;
         absences[*nbAbsences].jour = jour;
         strcpy(absences[*nbAbsences].demi_journee, demi_journee);
@@ -179,26 +180,27 @@ void afficherEtudiants(int jour, Etudiant etudiants[], Absence absences[], int n
         }
 
         // Afficher les informations de l'étudiant
-        printf("(%d) %-20s %-8d %-10d\n", etudiants[i].id_etu, etudiants[i].nom, etudiants[i].groupe, totalAbsencesAceJour);
+        printf("(%d) %s %d %d\n", etudiants[i].id_etu, etudiants[i].nom, etudiants[i].groupe, totalAbsencesAceJour);
     }
 }
 
 
 //-----------------------------------------------------------------------------------------------------C4------------------------------------------------------------------------------------------------------------//
 
-
-void depot_justificatif(Absence absences[], int nbAbsences, Justificatif justificatifs[], int* nbJustificatifs, int jour) {
+void depot_justificatif(Absence absences[], int nbAbsences, Justificatif justificatifs[], int* nbJustificatifs) {
     int id_abs, jour_justif;
     char motif[MAX_JUSTIF];
 
     // Saisie des données
-    scanf("%d %d %s", &id_abs, &jour_justif, motif);
+    scanf("%d %d ", &id_abs, &jour_justif);
+    fgets(motif, MAX_JUSTIF, stdin);  // Permet de saisir la chaîne avec des espaces
+    motif[strlen(motif) - 1] = '\0';
 
     int absenceTrouvee = 0;
 
-    // Parcourir les absences pour trouver l'absence correspondante
+    // Parcourir les absences pour trouver l'absence correspondante par ID d'absence
     for (int i = 0; i < nbAbsences; ++i) {
-        if (absences[i].id_etu == id_abs) {
+        if (absences[i].id_abs == id_abs) {  // Utilisation de id_absence ici
             absenceTrouvee = 1;
 
             // Vérifier si le jour du justificatif est avant le jour de l'absence
@@ -231,6 +233,74 @@ void depot_justificatif(Absence absences[], int nbAbsences, Justificatif justifi
     }
 }
 
+//-----------------------------------------------------------------------------------------------------C5------------------------------------------------------------------------------------------------------------//
+
+void permutationAbsences(Absence* a, Absence* b) {
+    Absence temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+// Fonction de tri des validations
+void tri_validations(Absence absences[], const int nombre_absences) {
+    for (int i = 0; i < nombre_absences - 1; ++i) {
+        for (int j = 0; j < nombre_absences - i - 1; ++j) {
+            // Trier par id_etudiant (ordre croissant)
+            if (absences[j].id_etu > absences[j + 1].id_etu) {
+                permutationAbsences(&absences[j], &absences[j + 1]);
+            }
+            // Si les id_etudiant sont égaux, trier par jour (ordre croissant)
+            else if (absences[j].id_etu == absences[j + 1].id_etu &&
+                absences[j].jour > absences[j + 1].jour) {
+                permutationAbsences(&absences[j], &absences[j + 1]);
+            }
+            // Si les id_etudiant et jour sont égaux, trier par demi_journee (ordre alphabétique croissant)
+            else if (absences[j].id_etu == absences[j + 1].id_etu &&
+                absences[j].jour == absences[j + 1].jour &&
+                strcmp(absences[j].demi_journee, absences[j + 1].demi_journee) > 0) {
+                permutationAbsences(&absences[j], &absences[j + 1]);
+            }
+        }
+    }
+}
+
+
+void validations(Absence absences[], Justificatif justificatifs[], Etudiant etudiants[], int nbAbsences, int nbEtudiants, int nbJustificatifs) {
+    tri_validations(absences, nbAbsences);
+
+    int validationEnAttente = 0;
+
+    for (int i = 0; i < nbAbsences; i++) {
+        validationEnAttente = 0; // Reset pour chaque absence
+
+        for (int j = 0; j < nbJustificatifs; j++) {
+            if (justificatifs[j].id_abs == absences[i].id_abs) {
+                validationEnAttente = 1;
+                
+                // Trouver l'étudiant correspondant à l'absence via l'id_etu
+                for (int k = 0; k < nbEtudiants; k++) {
+                    if (etudiants[k].id_etu == absences[i].id_etu) {
+                        printf("[%d] (%d) %s %d %d/%s (%s)\n",
+                            absences[i].id_abs,
+                            absences[i].id_etu,
+                            etudiants[k].nom,
+                            etudiants[k].groupe,
+                            absences[i].jour,
+                            absences[i].demi_journee, 
+                            justificatifs[j].motif);
+                        break; // Sortir de la boucle étudiant dès que l'étudiant correspondant est trouvé
+                    }
+                }
+                break; // Sortir de la boucle de justification après affichage
+            }
+        }
+
+        // Si aucune validation n'a été trouvée pour cette absence
+        if (!validationEnAttente) {
+            printf("Aucune validation en attente\n");
+        }
+    }
+}
 
 
 
@@ -266,11 +336,12 @@ int main() {
         }
 
         if (strcmp(commande, "justificatif") == 0) {
-            int jourActuel;
-            scanf("%d", &jourActuel);
-            depot_justificatif(absences, nbAbsences, justificatifs, &nbJustificatifs, jour);
+            depot_justificatif(absences, nbAbsences, justificatifs, &nbJustificatifs);
         }
 
+        if (strcmp(commande, "validations") == 0) {
+            validations(absences, justificatifs, etudiants, nbAbsences, nbEtudiants, nbJustificatifs);
+        }
 
     } while (strcmp(commande, "exit") != 0);
 
