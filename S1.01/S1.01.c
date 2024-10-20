@@ -12,6 +12,7 @@ enum {
     NOMBRE_MAX_J_SEMESTRE = 40,
     TAILLE_MAX_COMMANDE = 31,
     MAX_JUSTIF = 50,
+    VERDICT = 3,
 };
 
 // Définition de la structure Etudiant
@@ -302,6 +303,63 @@ void validations(Absence absences[], Justificatif justificatifs[], Etudiant etud
     }
 }
 
+//-----------------------------------------------------------------------------------------------------C6------------------------------------------------------------------------------------------------------------//
+
+void validation_justif(Absence absences[],int nbAbsences, Justificatif justificatifs[], int nbJustificatifs) {
+    int id_abs;
+    char verdict[MAX_NOM];
+
+    // Lire l'entrée
+    scanf("%d %s", &id_abs, verdict);
+
+    // Vérifier si le verdict est "ok" ou "ko"
+    if (strcmp(verdict, "ok") != 0 && strcmp(verdict, "ko") != 0) {
+        printf("Code incorrect\n");
+        return;
+    }
+
+    int absenceTrouvee = 0;
+    int validationDejaConnue = 0;
+
+    // Parcourir les absences pour trouver l'absence correspondante
+    for (int i = 0; i < nbAbsences; ++i) {
+        if (absences[i].id_abs == id_abs) {
+            absenceTrouvee = 1;
+
+            // Vérification si la validation existe déjà
+            for (int j = 0; j < nbJustificatifs; ++j) {
+                if (justificatifs[j].id_abs == id_abs) {
+                    validationDejaConnue = 1;
+                    break;
+                }
+            }
+
+            // Enregistrement de la validation si elle n'est pas déjà connue
+            if (!validationDejaConnue) {
+                printf("Validation enregistree\n");
+                return; // Sortie après l'enregistrement
+            }
+        }
+    }
+
+
+    // Si aucune absence n'a été trouvée
+    if (!absenceTrouvee) {
+        printf("Identifiant incorrect\n");
+    }
+    else if (validationDejaConnue) {
+        printf("Validation deja connue\n");
+    }
+
+
+
+
+
+}
+
+
+
+
 
 
 // Fonction principale
@@ -341,6 +399,11 @@ int main() {
 
         if (strcmp(commande, "validations") == 0) {
             validations(absences, justificatifs, etudiants, nbAbsences, nbEtudiants, nbJustificatifs);
+        }
+
+        if (strcmp(commande, "validation") == 0) {
+            validation_justif(absences, nbAbsences, justificatifs, nbJustificatifs);
+
         }
 
     } while (strcmp(commande, "exit") != 0);
