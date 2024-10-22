@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 // Définition des constantes avec enum
 enum {
@@ -36,7 +37,14 @@ typedef struct {
     int id_abs;
     int jour;
     char motif[MAX_JUSTIF];
+    bool valide;
+    char verdict[VERDICT];
 }Justificatif;
+
+
+
+# define OK = 0,
+# define KO = 1,
 
 
 //-----------------------------------------------------------------------------------------------------C1------------------------------------------------------------------------------------------------------------//
@@ -235,7 +243,6 @@ void depot_justificatif(Absence absences[], int nbAbsences, Justificatif justifi
 }
 
 //-----------------------------------------------------------------------------------------------------C5------------------------------------------------------------------------------------------------------------//
-
 void permutationAbsences(Absence* a, Absence* b) {
     Absence temp = *a;
     *a = *b;
@@ -265,49 +272,46 @@ void tri_validations(Absence absences[], const int nombre_absences) {
     }
 }
 
-
 void validations(Absence absences[], Justificatif justificatifs[], Etudiant etudiants[], int nbAbsences, int nbEtudiants, int nbJustificatifs) {
-    tri_validations(absences, nbAbsences);
-
-    int validationEnAttente = 0;
+    int validationTrouvee = 0; // Drapeau pour détecter si des validations ont été trouvées
 
     for (int i = 0; i < nbAbsences; i++) {
-        validationEnAttente = 0; // Reset pour chaque absence
-
         for (int j = 0; j < nbJustificatifs; j++) {
-            if (justificatifs[j].id_abs == absences[i].id_abs) {
-                validationEnAttente = 1;
-                
-                // Trouver l'étudiant correspondant à l'absence via l'id_etu
+            if (absences[i].id_abs == justificatifs[j].id_abs && absences[i].jour - justificatifs[j].jour >= -3) {
                 for (int k = 0; k < nbEtudiants; k++) {
                     if (etudiants[k].id_etu == absences[i].id_etu) {
+                        // Si une validation est trouvée, on affiche et on met à jour le drapeau
                         printf("[%d] (%d) %s %d %d/%s (%s)\n",
                             absences[i].id_abs,
                             absences[i].id_etu,
                             etudiants[k].nom,
                             etudiants[k].groupe,
                             absences[i].jour,
-                            absences[i].demi_journee, 
+                            absences[i].demi_journee,
                             justificatifs[j].motif);
-                        break; // Sortir de la boucle étudiant dès que l'étudiant correspondant est trouvé
+
+                        validationTrouvee = 1; // Validation trouvée
                     }
                 }
-                break; // Sortir de la boucle de justification après affichage
             }
         }
+    }
 
-        // Si aucune validation n'a été trouvée pour cette absence
-        if (!validationEnAttente) {
-            printf("Aucune validation en attente\n");
-        }
+    // Si aucune validation n'a été trouvée, on affiche le message correspondant
+    if (!validationTrouvee) {
+        printf("Aucune validation en attente\n");
     }
 }
 
+
+
+
+
 //-----------------------------------------------------------------------------------------------------C6------------------------------------------------------------------------------------------------------------//
 
-void validation_justif(Absence absences[],int nbAbsences, Justificatif justificatifs[], int nbJustificatifs) {
+void validation_justif(Absence absences[], int nbAbsences, Justificatif justificatifs[], int nbJustificatifs) {
     int id_abs;
-    char verdict[MAX_NOM];
+    char verdict[VERDICT];
 
     // Lire l'entrée
     scanf("%d %s", &id_abs, verdict);
@@ -318,49 +322,33 @@ void validation_justif(Absence absences[],int nbAbsences, Justificatif justifica
         return;
     }
 
-    int absenceTrouvee = 0;
-    int validationDejaConnue = 0;
-
     // Parcourir les absences pour trouver l'absence correspondante
     for (int i = 0; i < nbAbsences; ++i) {
         if (absences[i].id_abs == id_abs) {
-            absenceTrouvee = 1;
-
             // Vérification si la validation existe déjà
-            for (int j = 0; j < nbJustificatifs; ++j) {
+            for (int j = 0; j < nbJustificatifs; j++) {
                 if (justificatifs[j].id_abs == id_abs) {
-                    validationDejaConnue = 1;
-                    break;
+                    if (absences[i].jour - justificatifs[j].jour <= -3) {
+                        printf("Identifiant incorrect\n");
+                        return;
+                    }
+                    if (justificatifs[j].valide) {
+                        printf("Validation deja connue\n");
+                        return;
+                    }
+
+                    justificatifs[j].valide = true;
+                    strcpy(justificatifs[j].verdict, verdict);
+                    printf("Validation enregistree\n");
+                    return;
                 }
             }
-
-            // Enregistrement de la validation si elle n'est pas déjà connue
-            if (!validationDejaConnue) {
-                printf("Validation enregistree\n");
-                return; // Sortie après l'enregistrement
-            }
+        }
+        else if (absences[i].id_abs != id_abs && i == nbAbsences - 1) {
+            printf("Identifiant incorrect\n");
         }
     }
-
-
-    // Si aucune absence n'a été trouvée
-    if (!absenceTrouvee) {
-        printf("Identifiant incorrect\n");
-    }
-    else if (validationDejaConnue) {
-        printf("Validation deja connue\n");
-    }
-
-
-
-
-
 }
-
-
-
-
-
 
 // Fonction principale
 int main() {
